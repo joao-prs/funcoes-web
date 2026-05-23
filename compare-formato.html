@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Comparador de Formatos</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #111;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 30px;
+    }
+
+    h1 {
+        margin-bottom: 20px;
+    }
+
+    .controls {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 25px;
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    input {
+        width: 120px;
+        padding: 10px;
+        border-radius: 8px;
+        border: none;
+        font-size: 16px;
+    }
+
+    button {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 8px;
+        background: #3b82f6;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.2s;
+    }
+
+    button:hover {
+        opacity: 0.85;
+    }
+
+    .circle-container {
+        width: 700px;
+        height: 700px;
+        border-radius: 50%;
+        border: 2px dashed rgba(255,255,255,0.02);
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 35px;
+
+        background: transparent;
+
+        box-shadow:
+            inset 0 0 0 1px rgba(255,255,255,0.05);
+    }
+
+    .ratio-box {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform-origin: center center;
+        border: 2px solid;
+        backdrop-filter: blur(1px);
+
+        z-index: 2;
+    }
+
+    .ratio-label {
+        position: absolute;
+        font-size: 13px;
+        padding: 2px 6px;
+        border-radius: 6px;
+        color: white;
+        font-weight: bold;
+        background: rgba(0,0,0,0.7);
+        white-space: nowrap;
+    }
+
+    table {
+        width: 100%;
+        max-width: 900px;
+        border-collapse: collapse;
+        background: #1b1b1b;
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    th, td {
+        padding: 14px;
+        text-align: left;
+    }
+
+    th {
+        background: #222;
+    }
+
+    tr:nth-child(even) {
+        background: #171717;
+    }
+
+    .color-preview {
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+
+    .remove-btn {
+        background: #dc2626;
+    }
+
+    .remove-btn:hover {
+        opacity: 0.8;
+    }
+
+</style>
+</head>
+<body>
+
+<h1>Comparador de Formatos</h1>
+
+<div class="controls">
+    <input type="number" id="widthInput" placeholder="Largura" />
+    <input type="number" id="heightInput" placeholder="Altura" />
+    <button onclick="addFormat()">Adicionar</button>
+</div>
+
+<div class="circle-container" id="circle"></div>
+
+<table>
+    <thead>
+        <tr>
+            <th>Cor</th>
+            <th>Formato</th>
+            <th>Resolução Base</th>
+            <th>Ação</th>
+        </tr>
+    </thead>
+    <tbody id="formatsTable"></tbody>
+</table>
+
+<script>
+
+const circle = document.getElementById('circle');
+const table = document.getElementById('formatsTable');
+
+const circleSize = 700;
+const radius = circleSize / 2;
+
+let formats = [];
+
+function randomColor() {
+    const hue = Math.floor(Math.random() * 360);
+    return `hsl(${hue}, 80%, 60%)`;
+}
+
+function addFormat() {
+
+    const w = parseFloat(document.getElementById('widthInput').value);
+    const h = parseFloat(document.getElementById('heightInput').value);
+
+    if (!w || !h || w <= 0 || h <= 0) {
+        alert("Informe largura e altura válidas.");
+        return;
+    }
+
+    const color = randomColor();
+
+    const item = {
+        id: Date.now(),
+        width: w,
+        height: h,
+        color
+    };
+
+    formats.push(item);
+
+    render();
+}
+
+function removeFormat(id) {
+    formats = formats.filter(f => f.id !== id);
+    render();
+}
+
+function render() {
+
+    table.innerHTML = '';
+    circle.innerHTML = '';
+
+    formats.forEach(format => {
+
+        const ratio = format.width / format.height;
+
+        /*
+            Cálculo para encaixar o retângulo
+            perfeitamente dentro do círculo:
+
+            diagonal = diâmetro do círculo
+
+            scale = diâmetro / diagonal original
+        */
+
+        const diagonal = Math.sqrt(
+            format.width * format.width +
+            format.height * format.height
+        );
+
+        const scale = (radius * 2) / diagonal;
+
+        const finalWidth = format.width * scale;
+        const finalHeight = format.height * scale;
+
+        const rect = document.createElement('div');
+        rect.className = 'ratio-box';
+
+        rect.style.width = finalWidth + 'px';
+        rect.style.height = finalHeight + 'px';
+
+        rect.style.marginLeft = -(finalWidth / 2) + 'px';
+        rect.style.marginTop = -(finalHeight / 2) + 'px';
+
+        rect.style.borderColor = format.color;
+
+        rect.style.background = hexToRGBA(format.color, 0.25);
+
+        circle.appendChild(rect);
+
+        const label = document.createElement('div');
+        label.className = 'ratio-label';
+
+        label.innerText = `${format.width}:${format.height}`;
+
+        label.style.color = format.color;
+
+        label.style.left = '50%';
+        label.style.top = '50%';
+
+        label.style.transform =
+            `translate(${finalWidth / 2 + 10}px, ${-finalHeight / 2}px)`;
+
+        circle.appendChild(label);
+
+        // Tabela
+
+        const row = document.createElement('tr');
+
+        row.innerHTML = `
+            <td>
+                <span class="color-preview"
+                    style="background:${format.color}">
+                </span>
+            </td>
+
+            <td style="color:${format.color}">
+                ${format.width}:${format.height}
+            </td>
+
+            <td>
+                ${format.width} × ${format.height}
+            </td>
+
+            <td>
+                <button class="remove-btn"
+                    onclick="removeFormat(${format.id})">
+                    Remover
+                </button>
+            </td>
+        `;
+        table.appendChild(row);
+    });
+}
+
+function hexToRGBA(color, alpha) {
+
+    // Converte HSL diretamente
+    return color.replace('hsl', 'hsla')
+                .replace(')', `, ${alpha})`);
+}
+
+</script>
+
+</body>
+</html>
